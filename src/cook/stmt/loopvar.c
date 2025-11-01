@@ -69,28 +69,66 @@ stmt_loopvar(expr_list_ty *lhs, expr_list_ty *rhs, stmt_ty *body)
     stmt_ty         *s7;
     stmt_ty         *s8;
     stmt_list_ty    *slp;
+    static expr_ty  *local_expr;
+    static expr_ty  *head_expr;
+    static expr_ty  *tail_expr;
+    static expr_ty  *count_expr;
+
+    if (!local_expr)
+    {
+        string_ty       *s;
+
+        s = str_from_c("local");
+        local_expr = expr_constant_new(s, 0);
+        str_free(s);
+    }
+    if (!head_expr)
+    {
+        string_ty       *s;
+
+        s = str_from_c("head");
+        head_expr = expr_constant_new(s, 0);
+        str_free(s);
+    }
+    if (!tail_expr)
+    {
+        string_ty       *s;
+
+        s = str_from_c("tail");
+        tail_expr = expr_constant_new(s, 0);
+        str_free(s);
+    }
+    if (!count_expr)
+    {
+        string_ty       *s;
+
+        s = str_from_c("count");
+        count_expr = expr_constant_new(s, 0);
+        str_free(s);
+    }
 
     pp = expr_list_position(lhs);
 
     /* <tmp> */
+    tlv = expr_list_new();
+    expr_list_append(tlv, local_expr);
+
     s = str_format("  temporary loop variable %d  ", ++temp_loop_count);
     ep = expr_constant_new(s, pp);
     str_free(s);
+    expr_list_append(tlv, ep);
+
+    /* s1: <tmp> = <rhs> ; */
+    s1 = stmt_assign_new(tlv, rhs);
+
+    expr_list_delete(tlv);
     tlv = expr_list_new();
     expr_list_append(tlv, ep);
     expr_delete(ep);
 
-    /* s1: <tmp> = <rhs> ; */
-    ++temp_loop_count;
-    s1 = stmt_assign_new(tlv, rhs);
-
     /* s2: <lhs> = [head [ <var> ]]; */
-    s = str_from_c("head");
-    ep = expr_constant_new(s, pp);
-    str_free(s);
     elp = expr_list_new();
-    expr_list_append(elp, ep);
-    expr_delete(ep);
+    expr_list_append(elp, head_expr);
 
     ep = expr_function_new(tlv);
     expr_list_append(elp, ep);
@@ -107,12 +145,8 @@ stmt_loopvar(expr_list_ty *lhs, expr_list_ty *rhs, stmt_ty *body)
     expr_list_delete(elp);
 
     /* s3: <var> = [tail [ <var> ]]; */
-    s = str_from_c("tail");
-    ep = expr_constant_new(s, pp);
-    str_free(s);
     elp = expr_list_new();
-    expr_list_append(elp, ep);
-    expr_delete(ep);
+    expr_list_append(elp, tail_expr);
 
     ep = expr_function_new(tlv);
     expr_list_append(elp, ep);
@@ -142,12 +176,8 @@ stmt_loopvar(expr_list_ty *lhs, expr_list_ty *rhs, stmt_ty *body)
     s5 = stmt_loopstop_new(pp);
 
     /* s6: if [count [ <var> ]] then <s4> else <s5> */
-    s = str_from_c("count");
-    ep = expr_constant_new(s, pp);
-    str_free(s);
     elp = expr_list_new();
-    expr_list_append(elp, ep);
-    expr_delete(ep);
+    expr_list_append(elp, count_expr);
 
     ep = expr_function_new(tlv);
     expr_list_append(elp, ep);
